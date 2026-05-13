@@ -1,15 +1,15 @@
 <?php
 return [
-    'id' => 'corporate',
-    'label' => 'Corporate',
-    'isDefault' => false,
-    'showThumbnail' => false,
-    'showTopBar' => true,
-    'showTitlebar' => false,
-    'expandDescriptionByDefault' => true,
-    'useLoadingAnimation' => false,
-    'transformDescriptionHeading' => true,
-    'css' => <<<'CSS'
+  'id' => 'corporate',
+  'label' => 'Corporate',
+  'isDefault' => false,
+  'showThumbnail' => false,
+  'showTopBar' => true,
+  'showTitlebar' => false,
+  'expandDescriptionByDefault' => true,
+  'useLoadingAnimation' => false,
+  'transformDescriptionHeading' => true,
+  'css' => <<<'CSS'
 a.card {
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
   background: rgba(255, 255, 255, 0.96);
@@ -27,7 +27,7 @@ a.card:hover {
   display: block;
   height: 8px;
   flex: 0 0 8px;
-  background: #1f5fcf;
+  background: #0099cc;
 }
 
 a.card.is-restricted .card-topbar {
@@ -55,7 +55,7 @@ a.card.is-restricted .card-topbar {
   margin: 0 0 10px;
   font-size: 23px;
   line-height: 1.2;
-  color: #1f5fcf;
+  color: #00529B;
   font-weight: 800;
 }
 
@@ -63,5 +63,5 @@ a.card.is-restricted .card-topbar {
   margin-bottom: 0;
 }
 CSS,
-    'js' => '',
+  'js' => '',
 ];

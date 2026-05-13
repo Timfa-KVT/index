@@ -1,15 +1,15 @@
 <?php
 return [
-    'id' => 'pantheon',
-    'label' => 'Pantheon',
-    'isDefault' => true,
-    'showThumbnail' => true,
-    'showTopBar' => false,
-    'showTitlebar' => false,
-    'expandDescriptionByDefault' => false,
-    'useLoadingAnimation' => true,
-    'transformDescriptionHeading' => false,
-    'css' => <<<'CSS'
+  'id' => 'pantheon',
+  'label' => 'Pantheon',
+  'isDefault' => true,
+  'showThumbnail' => true,
+  'showTopBar' => false,
+  'showTitlebar' => false,
+  'expandDescriptionByDefault' => false,
+  'useLoadingAnimation' => true,
+  'transformDescriptionHeading' => false,
+  'css' => <<<'CSS'
 a.card {
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.1);
   transform: translateY(0) scale(1);
@@ -171,7 +171,7 @@ a.card:focus-visible .desc {
   }
 }
 CSS,
-    'js' => <<<'JS'
+  'js' => <<<'JS'
 (function ()
 {
   const theme = document.body.getAttribute('data-theme');
