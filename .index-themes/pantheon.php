@@ -11,6 +11,11 @@ return [
   'useLoadingAnimation' => true,
   'transformDescriptionHeading' => false,
   'css' => <<<'CSS'
+:root {
+  --section-label-color: rgba(15, 23, 42, 0.72);
+  --section-separator-color: rgba(15, 23, 42, 0.18);
+}
+
 a.card {
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.1);
   transform: translateY(0) scale(1);

@@ -1,16 +1,21 @@
 <?php
 return [
-    'id' => 'dark',
-    'label' => 'Dark',
-    'isDefault' => false,
-    'logo' => 'logo_website_white.png',
-    'showThumbnail' => false,
-    'showTopBar' => true,
-    'showTitlebar' => false,
-    'expandDescriptionByDefault' => true,
-    'useLoadingAnimation' => false,
-    'transformDescriptionHeading' => true,
-    'css' => <<<'CSS'
+  'id' => 'dark',
+  'label' => 'Dark',
+  'isDefault' => false,
+  'logo' => 'logo_website_white.png',
+  'showThumbnail' => false,
+  'showTopBar' => true,
+  'showTitlebar' => false,
+  'expandDescriptionByDefault' => true,
+  'useLoadingAnimation' => false,
+  'transformDescriptionHeading' => true,
+  'css' => <<<'CSS'
+:root {
+  --section-label-color: rgba(255, 255, 255, 0.84);
+  --section-separator-color: rgba(255, 255, 255, 0.24);
+}
+
 body {
   background: #000000;
   color: #f0f0f0;
@@ -20,10 +25,6 @@ body::before {
   background:
     radial-gradient(900px 420px at 18% 0%, rgba(255, 255, 255, 0.08), transparent 58%),
     radial-gradient(920px 540px at 90% 100%, rgba(255, 255, 255, 0.04), transparent 66%);
-}
-
-.restricted-separator {
-  border-top-color: rgba(255, 255, 255, 0.24);
 }
 
 .theme-switcher-button {
@@ -127,5 +128,5 @@ a.card.is-restricted .card-topbar {
   margin-bottom: 0;
 }
 CSS,
-    'js' => '',
+  'js' => '',
 ];

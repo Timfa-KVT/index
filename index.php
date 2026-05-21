@@ -51,9 +51,9 @@ function loadDescriptionHtml(string $folderPath): string
 
 function loadMetaCategory(string $folderPath): ?string
 {
-    $metaPath = $folderPath . DIRECTORY_SEPARATOR . 'meta.json';
+    $metaPath = $folderPath . DIRECTORY_SEPARATOR . 'meta.conf';
     if (!is_file($metaPath)) {
-        $fallbackMetaPath = $folderPath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'meta.json';
+        $fallbackMetaPath = $folderPath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'meta.conf';
         if (!is_file($fallbackMetaPath)) {
             return null;
         }
@@ -522,6 +522,8 @@ if (count($allowedFoldersByCategory) > 1) {
             --muted: rgba(15, 23, 42, 0.68);
             --border: rgba(15, 23, 42, 0.1);
             --radius: 18px;
+            --section-label-color: rgba(15, 23, 42, 0.72);
+            --section-separator-color: rgba(15, 23, 42, 0.18);
             --switcher-bg: rgba(255, 255, 255, 0.84);
             --switcher-border: rgba(15, 23, 42, 0.16);
             --switcher-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
@@ -588,12 +590,12 @@ if (count($allowedFoldersByCategory) > 1) {
             text-transform: uppercase;
             letter-spacing: 0.06em;
             font-weight: 700;
-            color: rgba(15, 23, 42, 0.72);
+            color: var(--section-label-color);
         }
 
         .restricted-separator {
             margin: 20px 0 14px;
-            border-top: 1px solid rgba(15, 23, 42, 0.18);
+            border-top: 1px solid var(--section-separator-color);
         }
 
         a.card {
@@ -770,25 +772,6 @@ if (count($allowedFoldersByCategory) > 1) {
             margin: 0;
         }
 
-        .theme-save {
-            width: 100%;
-            margin-top: 8px;
-            border: 1px solid rgba(15, 23, 42, 0.14);
-            background: #ffffff;
-            border-radius: 9px;
-            padding: 8px 10px;
-            font-size: 13px;
-            color: rgba(15, 23, 42, 0.88);
-            cursor: pointer;
-        }
-
-        .theme-save:hover,
-        .theme-save:focus-visible {
-            background: rgba(15, 23, 42, 0.05);
-            border-color: rgba(15, 23, 42, 0.28);
-            outline: none;
-        }
-
         @media (max-width: 950px) {
             a.card {
                 grid-column: span 6;
@@ -835,7 +818,6 @@ if (count($allowedFoldersByCategory) > 1) {
                     <input type="checkbox" name="showCategories" value="1" <?= $showCategoriesEnabled ? 'checked' : '' ?>>
                     <span>Categorieen</span>
                 </label>
-                <button type="submit" class="theme-save">Opslaan</button>
             </div>
         </form>
         <button type="button" class="theme-switcher-button" id="themeSwitcherToggle" aria-expanded="false"
@@ -1002,6 +984,7 @@ if (count($allowedFoldersByCategory) > 1) {
             const switcher = document.getElementById('themeSwitcher');
             const toggleButton = document.getElementById('themeSwitcherToggle');
             const panel = document.getElementById('themeSwitcherPanel');
+            const categoriesCheckbox = panel ? panel.querySelector('input[name="showCategories"]') : null;
 
             if (!switcher || !toggleButton || !panel) return;
 
@@ -1032,6 +1015,14 @@ if (count($allowedFoldersByCategory) > 1) {
                     setOpen(false);
                 }
             });
+
+            if (categoriesCheckbox)
+            {
+                categoriesCheckbox.addEventListener('change', () =>
+                {
+                    panel.requestSubmit();
+                });
+            }
         })();
     </script>
     <?php if ($currentTheme['js'] !== ''): ?>
