@@ -49,29 +49,99 @@ function loadDescriptionHtml(string $folderPath): string
     return trim((string) $html);
 }
 
+function parseCategoryFromMetaRaw(string $raw): ?string
+{
+    $cleanRaw = ltrim($raw, "\xEF\xBB\xBF \t\r\n");
+
+    $decoded = json_decode($cleanRaw, true);
+    if (is_array($decoded)) {
+        $category = trim((string) ($decoded['category'] ?? ''));
+        if ($category !== '') {
+            return $category;
+        }
+    }
+
+    $ini = @parse_ini_string($cleanRaw, false, INI_SCANNER_TYPED);
+    if (is_array($ini)) {
+        $category = trim((string) ($ini['category'] ?? ''));
+        if ($category !== '') {
+            return $category;
+        }
+    }
+
+    if (preg_match('/^\s*category\s*[:=]\s*(.+?)\s*$/im', $cleanRaw, $match) === 1) {
+        $category = trim((string) ($match[1] ?? ''), " \t\r\n\"'");
+        if ($category !== '') {
+            return $category;
+        }
+    }
+
+    return null;
+}
+
 function loadMetaCategory(string $folderPath): ?string
 {
-    $metaPath = $folderPath . DIRECTORY_SEPARATOR . 'meta.conf';
-    if (!is_file($metaPath)) {
-        $fallbackMetaPath = $folderPath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'meta.conf';
-        if (!is_file($fallbackMetaPath)) {
-            return null;
+    $localCandidates = [
+        $folderPath . DIRECTORY_SEPARATOR . 'meta.conf',
+        $folderPath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'meta.conf',
+        $folderPath . DIRECTORY_SEPARATOR . 'meta.json',
+        $folderPath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'meta.json',
+    ];
+
+    foreach ($localCandidates as $metaPath) {
+        if (!is_file($metaPath)) {
+            continue;
         }
-        $metaPath = $fallbackMetaPath;
+
+        $raw = file_get_contents($metaPath);
+        if ($raw === false) {
+            continue;
+        }
+
+        $category = parseCategoryFromMetaRaw($raw);
+        if ($category !== null) {
+            return $category;
+        }
     }
 
-    $raw = file_get_contents($metaPath);
-    if ($raw === false) {
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === '') {
         return null;
     }
 
-    $decoded = json_decode($raw, true);
-    if (!is_array($decoded)) {
-        return null;
+    $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+    $scheme = $isHttps ? 'https' : 'http';
+    $scriptDir = trim((string) dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+    $basePath = $scriptDir === '' || $scriptDir === '.' ? '' : '/' . $scriptDir;
+    $folderSegment = rawurlencode((string) basename($folderPath));
+
+    $urlCandidates = [
+        $scheme . '://' . $host . $basePath . '/' . $folderSegment . '/meta.conf',
+        $scheme . '://' . $host . $basePath . '/' . $folderSegment . '/web/meta.conf',
+        $scheme . '://' . $host . $basePath . '/' . $folderSegment . '/meta.json',
+        $scheme . '://' . $host . $basePath . '/' . $folderSegment . '/web/meta.json',
+    ];
+
+    $httpContext = stream_context_create([
+        'http' => [
+            'timeout' => 2,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    foreach ($urlCandidates as $url) {
+        $raw = @file_get_contents($url, false, $httpContext);
+        if ($raw === false) {
+            continue;
+        }
+
+        $category = parseCategoryFromMetaRaw($raw);
+        if ($category !== null) {
+            return $category;
+        }
     }
 
-    $category = trim((string) ($decoded['category'] ?? ''));
-    return $category === '' ? null : $category;
+    return null;
 }
 
 function getThumbnailPath(string $folderName, string $folderPath): ?string
