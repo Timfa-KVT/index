@@ -1,16 +1,16 @@
 <?php
 return [
-  'id' => 'dark',
-  'label' => 'Dark',
-  'isDefault' => false,
-  'logo' => 'logo_website_white.png',
-  'showThumbnail' => false,
-  'showTopBar' => true,
-  'showTitlebar' => false,
-  'expandDescriptionByDefault' => true,
-  'useLoadingAnimation' => false,
-  'transformDescriptionHeading' => true,
-  'css' => <<<'CSS'
+    'id' => 'dark',
+    'label' => 'Dark',
+    'isDefault' => false,
+    'logo' => 'logo_website_white.png',
+    'showThumbnail' => false,
+    'showTopBar' => true,
+    'showTitlebar' => false,
+    'expandDescriptionByDefault' => true,
+    'useLoadingAnimation' => false,
+    'transformDescriptionHeading' => true,
+    'css' => <<<'CSS'
 body {
   background: #000000;
   color: #f0f0f0;
@@ -127,5 +127,5 @@ a.card.is-restricted .card-topbar {
   margin-bottom: 0;
 }
 CSS,
-  'js' => '',
+    'js' => '',
 ];

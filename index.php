@@ -49,6 +49,31 @@ function loadDescriptionHtml(string $folderPath): string
     return trim((string) $html);
 }
 
+function loadMetaCategory(string $folderPath): ?string
+{
+    $metaPath = $folderPath . DIRECTORY_SEPARATOR . 'meta.json';
+    if (!is_file($metaPath)) {
+        $fallbackMetaPath = $folderPath . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR . 'meta.json';
+        if (!is_file($fallbackMetaPath)) {
+            return null;
+        }
+        $metaPath = $fallbackMetaPath;
+    }
+
+    $raw = file_get_contents($metaPath);
+    if ($raw === false) {
+        return null;
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return null;
+    }
+
+    $category = trim((string) ($decoded['category'] ?? ''));
+    return $category === '' ? null : $category;
+}
+
 function getThumbnailPath(string $folderName, string $folderPath): ?string
 {
     $primary = $folderPath . DIRECTORY_SEPARATOR . 'thumbnail.png';
@@ -181,7 +206,7 @@ function getDefaultThemeId(array $themes): string
         }
     }
 
-    return (string) (array_key_first($themes) ?? 'pantheon');
+    return (string) (array_key_first($themes) ?? 'corporate');
 }
 
 function makeUserPrefsFilePath(string $prefsDir, ?string $email): ?string
@@ -203,50 +228,86 @@ function makeUserPrefsFilePath(string $prefsDir, ?string $email): ?string
     return $prefsDir . DIRECTORY_SEPARATOR . $safeName . '.json';
 }
 
-function writeThemePreference(string $prefsFilePath, string $email, string $themeId): void
+function normalizeShowCategoriesPreference(mixed $value): bool
+{
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    if (is_int($value)) {
+        return $value !== 0;
+    }
+
+    if (is_string($value)) {
+        $normalized = strtolower(trim($value));
+        return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+    }
+
+    return false;
+}
+
+function writeUserPreferences(string $prefsFilePath, string $email, string $themeId, bool $showCategories): void
 {
     ensureDirectory(dirname($prefsFilePath));
     $payload = [
         'email' => strtolower(trim($email)),
         'theme' => $themeId,
+        'showCategories' => $showCategories,
         'updatedAt' => gmdate('c'),
     ];
 
     @file_put_contents($prefsFilePath, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 }
 
-function loadThemePreference(string $prefsDir, ?string $email, string $defaultThemeId, array $availableThemeIds): string
+function loadUserPreferences(string $prefsDir, ?string $email, string $defaultThemeId, array $availableThemeIds): array
 {
+    $defaultPrefs = [
+        'theme' => $defaultThemeId,
+        'showCategories' => true,
+    ];
+
     if (!is_string($email) || trim($email) === '') {
-        return $defaultThemeId;
+        return $defaultPrefs;
     }
 
     ensureDirectory($prefsDir);
     $prefsFilePath = makeUserPrefsFilePath($prefsDir, $email);
     if ($prefsFilePath === null) {
-        return $defaultThemeId;
+        return $defaultPrefs;
     }
 
     if (!is_file($prefsFilePath)) {
-        writeThemePreference($prefsFilePath, $email, $defaultThemeId);
-        return $defaultThemeId;
+        writeUserPreferences($prefsFilePath, $email, $defaultThemeId, true);
+        return $defaultPrefs;
     }
 
     $raw = file_get_contents($prefsFilePath);
     if ($raw === false) {
-        writeThemePreference($prefsFilePath, $email, $defaultThemeId);
-        return $defaultThemeId;
+        writeUserPreferences($prefsFilePath, $email, $defaultThemeId, true);
+        return $defaultPrefs;
     }
 
     $decoded = json_decode($raw, true);
-    $themeId = strtolower(trim((string) ($decoded['theme'] ?? '')));
-
-    if ($themeId === '' || !in_array($themeId, $availableThemeIds, true)) {
-        writeThemePreference($prefsFilePath, $email, $defaultThemeId);
-        return $defaultThemeId;
+    if (!is_array($decoded)) {
+        writeUserPreferences($prefsFilePath, $email, $defaultThemeId, true);
+        return $defaultPrefs;
     }
 
-    return $themeId;
+    $themeId = strtolower(trim((string) ($decoded['theme'] ?? '')));
+    if ($themeId === '' || !in_array($themeId, $availableThemeIds, true)) {
+        $themeId = $defaultThemeId;
+    }
+
+    $showCategories = array_key_exists('showCategories', $decoded)
+        ? normalizeShowCategoriesPreference($decoded['showCategories'])
+        : true;
+
+    writeUserPreferences($prefsFilePath, $email, $themeId, $showCategories);
+
+    return [
+        'theme' => $themeId,
+        'showCategories' => $showCategories,
+    ];
 }
 
 function getPageNameFromHref(string $href, string $fallbackName): string
@@ -307,21 +368,28 @@ $themeIds = array_keys($themes);
 
 $currentUserEmail = $_SESSION['user']['email'] ?? null;
 $normalizedCurrentUserEmail = normalizeEmailForCompare(is_string($currentUserEmail) ? $currentUserEmail : null);
+$userPrefs = loadUserPreferences($prefsDir, $currentUserEmail, $defaultThemeId, $themeIds);
+$selectedThemeId = (string) ($userPrefs['theme'] ?? $defaultThemeId);
+$showCategoriesEnabled = !empty($userPrefs['showCategories']);
 
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && (string) ($_POST['action'] ?? '') === 'theme-select'
 ) {
     $requestedThemeId = strtolower(trim((string) ($_POST['theme'] ?? '')));
+    $requestedShowCategories = array_key_exists('showCategories', $_POST);
+
+    if ($requestedThemeId === '' || !in_array($requestedThemeId, $themeIds, true)) {
+        $requestedThemeId = $selectedThemeId;
+    }
+
     if (
-        $requestedThemeId !== ''
-        && in_array($requestedThemeId, $themeIds, true)
-        && is_string($currentUserEmail)
+        is_string($currentUserEmail)
         && trim($currentUserEmail) !== ''
     ) {
         $prefsFilePath = makeUserPrefsFilePath($prefsDir, $currentUserEmail);
         if ($prefsFilePath !== null) {
-            writeThemePreference($prefsFilePath, $currentUserEmail, $requestedThemeId);
+            writeUserPreferences($prefsFilePath, $currentUserEmail, $requestedThemeId, $requestedShowCategories);
         }
     }
 
@@ -330,7 +398,6 @@ if (
     exit;
 }
 
-$selectedThemeId = loadThemePreference($prefsDir, $currentUserEmail, $defaultThemeId, $themeIds);
 $currentTheme = $themes[$selectedThemeId] ?? $themes[$defaultThemeId];
 $currentThemeId = (string) $currentTheme['id'];
 $currentThemeLogo = (string) ($currentTheme['logo'] ?? 'kvt_logo.png');
@@ -396,6 +463,7 @@ foreach ($items as $name) {
     $folders[] = [
         'name' => $name,
         'display' => $display,
+        'category' => loadMetaCategory($path),
         'href' => $href,
         'description' => $description,
         'thumbnail' => getThumbnailPath($name, $path),
@@ -413,6 +481,25 @@ foreach ($folders as $folder) {
         continue;
     }
     $allowedFolders[] = $folder;
+}
+
+$allowedFoldersByCategory = [];
+$allowedUncategorizedFolders = [];
+foreach ($allowedFolders as $folder) {
+    $category = trim((string) ($folder['category'] ?? ''));
+    if ($category === '') {
+        $allowedUncategorizedFolders[] = $folder;
+        continue;
+    }
+
+    if (!array_key_exists($category, $allowedFoldersByCategory)) {
+        $allowedFoldersByCategory[$category] = [];
+    }
+    $allowedFoldersByCategory[$category][] = $folder;
+}
+
+if (count($allowedFoldersByCategory) > 1) {
+    uksort($allowedFoldersByCategory, static fn(string $a, string $b): int => strcasecmp($a, $b));
 }
 ?>
 <!doctype html>
@@ -493,6 +580,15 @@ foreach ($folders as $folder) {
             grid-template-columns: repeat(12, 1fr);
             gap: 16px;
             margin-top: 10px;
+        }
+
+        .section-label {
+            margin: 18px 2px 2px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            color: rgba(15, 23, 42, 0.72);
         }
 
         .restricted-separator {
@@ -654,6 +750,45 @@ foreach ($folders as $folder) {
             cursor: default;
         }
 
+        .theme-switcher-bottom {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(15, 23, 42, 0.12);
+        }
+
+        .theme-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: rgba(15, 23, 42, 0.86);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .theme-checkbox-row input {
+            margin: 0;
+        }
+
+        .theme-save {
+            width: 100%;
+            margin-top: 8px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            background: #ffffff;
+            border-radius: 9px;
+            padding: 8px 10px;
+            font-size: 13px;
+            color: rgba(15, 23, 42, 0.88);
+            cursor: pointer;
+        }
+
+        .theme-save:hover,
+        .theme-save:focus-visible {
+            background: rgba(15, 23, 42, 0.05);
+            border-color: rgba(15, 23, 42, 0.28);
+            outline: none;
+        }
+
         @media (max-width: 950px) {
             a.card {
                 grid-column: span 6;
@@ -686,6 +821,7 @@ foreach ($folders as $folder) {
     <div class="theme-switcher" id="themeSwitcher">
         <form id="themeSwitcherPanel" class="theme-switcher-panel" method="post">
             <input type="hidden" name="action" value="theme-select">
+            <input type="hidden" name="theme" value="<?= htmlspecialchars($currentThemeId, ENT_QUOTES, 'UTF-8') ?>">
             <div class="theme-switcher-title">Thema</div>
             <?php foreach ($orderedThemes as $themeId => $themeConfig): ?>
                 <button type="submit" class="theme-option <?= $themeId === $currentThemeId ? 'is-active' : '' ?>"
@@ -694,6 +830,13 @@ foreach ($folders as $folder) {
                     <?= htmlspecialchars((string) $themeConfig['label'], ENT_QUOTES, 'UTF-8') ?>
                 </button>
             <?php endforeach; ?>
+            <div class="theme-switcher-bottom">
+                <label class="theme-checkbox-row">
+                    <input type="checkbox" name="showCategories" value="1" <?= $showCategoriesEnabled ? 'checked' : '' ?>>
+                    <span>Categorieen</span>
+                </label>
+                <button type="submit" class="theme-save">Opslaan</button>
+            </div>
         </form>
         <button type="button" class="theme-switcher-button" id="themeSwitcherToggle" aria-expanded="false"
             aria-controls="themeSwitcherPanel" aria-label="Selecteer thema">
@@ -714,41 +857,112 @@ foreach ($folders as $folder) {
         <?php if (count($folders) === 0): ?>
             <div class="empty">Geen folders gevonden in deze map.</div>
         <?php else: ?>
-            <div class="grid">
-                <?php foreach ($allowedFolders as $f): ?>
-                    <a class="card" href="<?= htmlspecialchars((string) $f['href'], ENT_QUOTES, 'UTF-8') ?>">
-                        <?php if (!empty($currentTheme['showTopBar'])): ?>
-                            <div class="card-topbar" aria-hidden="true"></div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($currentTheme['showThumbnail'])): ?>
-                            <div class="thumbwrap">
-                                <?php if ($f['thumbnail']): ?>
-                                    <img class="thumb" src="<?= htmlspecialchars((string) $f['thumbnail'], ENT_QUOTES, 'UTF-8') ?>"
-                                        alt="">
+            <?php if ($showCategoriesEnabled): ?>
+                <?php foreach ($allowedFoldersByCategory as $categoryName => $categoryFolders): ?>
+                    <h2 class="section-label"><?= htmlspecialchars((string) $categoryName, ENT_QUOTES, 'UTF-8') ?></h2>
+                    <div class="grid">
+                        <?php foreach ($categoryFolders as $f): ?>
+                            <a class="card" href="<?= htmlspecialchars((string) $f['href'], ENT_QUOTES, 'UTF-8') ?>">
+                                <?php if (!empty($currentTheme['showTopBar'])): ?>
+                                    <div class="card-topbar" aria-hidden="true"></div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($currentTheme['showTitlebar'])): ?>
-                                    <div class="titlebar">
-                                        <h2 class="title"><?= htmlspecialchars((string) $f['display'], ENT_QUOTES, 'UTF-8') ?></h2>
-                                        <div class="pill">Open</div>
+                                <?php if (!empty($currentTheme['showThumbnail'])): ?>
+                                    <div class="thumbwrap">
+                                        <?php if ($f['thumbnail']): ?>
+                                            <img class="thumb" src="<?= htmlspecialchars((string) $f['thumbnail'], ENT_QUOTES, 'UTF-8') ?>"
+                                                alt="">
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($currentTheme['showTitlebar'])): ?>
+                                            <div class="titlebar">
+                                                <h2 class="title"><?= htmlspecialchars((string) $f['display'], ENT_QUOTES, 'UTF-8') ?></h2>
+                                                <div class="pill">Open</div>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
 
-                        <div class="content <?= !empty($currentTheme['expandDescriptionByDefault']) ? 'is-expanded' : '' ?>">
-                            <div class="desc"><?= $f['description'] ?></div>
-                        </div>
-                    </a>
+                                <div class="content <?= !empty($currentTheme['expandDescriptionByDefault']) ? 'is-expanded' : '' ?>">
+                                    <div class="desc"><?= $f['description'] ?></div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 <?php endforeach; ?>
-            </div>
+
+                <?php if (count($allowedUncategorizedFolders) > 0): ?>
+                    <h2 class="section-label">Ongecategoriseerd</h2>
+                    <div class="grid">
+                        <?php foreach ($allowedUncategorizedFolders as $f): ?>
+                            <a class="card" href="<?= htmlspecialchars((string) $f['href'], ENT_QUOTES, 'UTF-8') ?>">
+                                <?php if (!empty($currentTheme['showTopBar'])): ?>
+                                    <div class="card-topbar" aria-hidden="true"></div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($currentTheme['showThumbnail'])): ?>
+                                    <div class="thumbwrap">
+                                        <?php if ($f['thumbnail']): ?>
+                                            <img class="thumb" src="<?= htmlspecialchars((string) $f['thumbnail'], ENT_QUOTES, 'UTF-8') ?>"
+                                                alt="">
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($currentTheme['showTitlebar'])): ?>
+                                            <div class="titlebar">
+                                                <h2 class="title"><?= htmlspecialchars((string) $f['display'], ENT_QUOTES, 'UTF-8') ?></h2>
+                                                <div class="pill">Open</div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="content <?= !empty($currentTheme['expandDescriptionByDefault']) ? 'is-expanded' : '' ?>">
+                                    <div class="desc"><?= $f['description'] ?></div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            <?php else: ?>
+                <div class="grid">
+                    <?php foreach ($allowedFolders as $f): ?>
+                        <a class="card" href="<?= htmlspecialchars((string) $f['href'], ENT_QUOTES, 'UTF-8') ?>">
+                            <?php if (!empty($currentTheme['showTopBar'])): ?>
+                                <div class="card-topbar" aria-hidden="true"></div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($currentTheme['showThumbnail'])): ?>
+                                <div class="thumbwrap">
+                                    <?php if ($f['thumbnail']): ?>
+                                        <img class="thumb" src="<?= htmlspecialchars((string) $f['thumbnail'], ENT_QUOTES, 'UTF-8') ?>"
+                                            alt="">
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($currentTheme['showTitlebar'])): ?>
+                                        <div class="titlebar">
+                                            <h2 class="title"><?= htmlspecialchars((string) $f['display'], ENT_QUOTES, 'UTF-8') ?></h2>
+                                            <div class="pill">Open</div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="content <?= !empty($currentTheme['expandDescriptionByDefault']) ? 'is-expanded' : '' ?>">
+                                <div class="desc"><?= $f['description'] ?></div>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
 
             <?php if (count($allowedFolders) > 0 && count($restrictedFolders) > 0): ?>
                 <div class="restricted-separator" aria-hidden="true"></div>
             <?php endif; ?>
 
             <?php if (count($restrictedFolders) > 0): ?>
+                <?php if ($showCategoriesEnabled): ?>
+                    <h2 class="section-label">Geen Toegang</h2>
+                <?php endif; ?>
                 <div class="grid">
                     <?php foreach ($restrictedFolders as $f): ?>
                         <a class="card is-restricted" href="<?= htmlspecialchars((string) $f['href'], ENT_QUOTES, 'UTF-8') ?>">

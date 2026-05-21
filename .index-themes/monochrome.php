@@ -1,16 +1,16 @@
 <?php
 return [
-  'id' => 'monochrome',
-  'label' => 'Monochrome',
-  'isDefault' => false,
-  'logo' => 'logo_website_black.png',
-  'showThumbnail' => false,
-  'showTopBar' => true,
-  'showTitlebar' => false,
-  'expandDescriptionByDefault' => true,
-  'useLoadingAnimation' => false,
-  'transformDescriptionHeading' => true,
-  'css' => <<<'CSS'
+    'id' => 'monochrome',
+    'label' => 'Monochrome',
+    'isDefault' => false,
+    'logo' => 'logo_website_black.png',
+    'showThumbnail' => false,
+    'showTopBar' => true,
+    'showTitlebar' => false,
+    'expandDescriptionByDefault' => true,
+    'useLoadingAnimation' => false,
+    'transformDescriptionHeading' => true,
+    'css' => <<<'CSS'
 body {
   filter: saturate(0);
 }
@@ -73,5 +73,5 @@ a.card.is-restricted .card-topbar {
   margin-bottom: 0;
 }
 CSS,
-  'js' => '',
+    'js' => '',
 ];
