@@ -2,7 +2,8 @@
 return [
   'id' => 'pantheon',
   'label' => 'Pantheon',
-  'isDefault' => true,
+  'isDefault' => false,
+  'logo' => 'logo_website_pantheon.png',
   'showThumbnail' => true,
   'showTopBar' => false,
   'showTitlebar' => false,

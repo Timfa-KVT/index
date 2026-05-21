@@ -160,6 +160,10 @@ function loadThemeConfigurations(string $themeDir): array
         $themeConfig['expandDescriptionByDefault'] = !empty($themeConfig['expandDescriptionByDefault']);
         $themeConfig['useLoadingAnimation'] = !empty($themeConfig['useLoadingAnimation']);
         $themeConfig['transformDescriptionHeading'] = !empty($themeConfig['transformDescriptionHeading']);
+        $themeConfig['logo'] = trim((string) ($themeConfig['logo'] ?? 'kvt_logo.png'));
+        if ($themeConfig['logo'] === '') {
+            $themeConfig['logo'] = 'kvt_logo.png';
+        }
         $themeConfig['css'] = (string) ($themeConfig['css'] ?? '');
         $themeConfig['js'] = (string) ($themeConfig['js'] ?? '');
 
@@ -329,6 +333,8 @@ if (
 $selectedThemeId = loadThemePreference($prefsDir, $currentUserEmail, $defaultThemeId, $themeIds);
 $currentTheme = $themes[$selectedThemeId] ?? $themes[$defaultThemeId];
 $currentThemeId = (string) $currentTheme['id'];
+$currentThemeLogo = (string) ($currentTheme['logo'] ?? 'kvt_logo.png');
+$currentThemeLabel = (string) ($currentTheme['label'] ?? 'KVT');
 
 $orderedThemes = $themes;
 uksort(
@@ -700,7 +706,9 @@ foreach ($folders as $folder) {
 
     <div class="wrap">
         <header>
-            <img class="logo" src="kvt_logo.png" alt="KVT logo" />
+            <img class="logo" src="<?= htmlspecialchars($currentThemeLogo, ENT_QUOTES, 'UTF-8') ?>"
+                alt="<?= htmlspecialchars($currentThemeLabel, ENT_QUOTES, 'UTF-8') ?> logo"
+                onerror="this.onerror=null;this.src='kvt_logo.png';" />
         </header>
 
         <?php if (count($folders) === 0): ?>

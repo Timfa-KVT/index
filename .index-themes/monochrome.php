@@ -1,9 +1,9 @@
 <?php
 return [
-  'id' => 'corporate',
-  'label' => 'Corporate',
-  'isDefault' => true,
-  'logo' => 'kvt_logo.png',
+  'id' => 'monochrome',
+  'label' => 'Monochrome',
+  'isDefault' => false,
+  'logo' => 'logo_website_black.png',
   'showThumbnail' => false,
   'showTopBar' => true,
   'showTitlebar' => false,
@@ -11,28 +11,37 @@ return [
   'useLoadingAnimation' => false,
   'transformDescriptionHeading' => true,
   'css' => <<<'CSS'
+body {
+  filter: saturate(0);
+}
+
 a.card {
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+  background: #ffffff;
   min-height: 220px;
   display: flex;
   flex-direction: column;
 }
 
 a.card:hover {
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
-  border-color: rgba(15, 23, 42, 0.16);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+  border-color: rgba(0, 0, 0, 0.3);
 }
 
 .card-topbar {
   display: block;
   height: 8px;
   flex: 0 0 8px;
-  background: #0099cc;
+  background: #000000;
+}
+
+a.card.is-restricted {
+  background: #d8d8d8;
+  border-color: #b2b2b2;
 }
 
 a.card.is-restricted .card-topbar {
-  background: #cf3b31;
+  background: #8f8f8f;
 }
 
 .content {
@@ -47,7 +56,7 @@ a.card.is-restricted .card-topbar {
 }
 
 .desc {
-  color: rgba(15, 23, 42, 0.78);
+  color: rgba(0, 0, 0, 0.72);
   display: block;
   overflow: visible;
 }
@@ -56,7 +65,7 @@ a.card.is-restricted .card-topbar {
   margin: 0 0 10px;
   font-size: 23px;
   line-height: 1.2;
-  color: #00529B;
+  color: #1a1a1a;
   font-weight: 800;
 }
 
