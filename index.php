@@ -520,14 +520,22 @@ foreach ($items as $name) {
         $isRestricted = $normalizedCurrentUserEmail === null || !in_array($normalizedCurrentUserEmail, $normalizedAllowedUsers, true);
     }
 
-    $description = loadDescriptionHtml($path);
-    if ($description === '') {
-        $description = '<p><em>Geen beschrijving.</em></p>';
-    }
+    if ($isRestricted) {
+        if (empty($currentTheme['showThumbnail'])) {
+            $description = '<h3>' . htmlspecialchars($display, ENT_QUOTES, 'UTF-8') . '</h3>';
+        } else {
+            $description = '';
+        }
+    } else {
+        $description = loadDescriptionHtml($path);
+        if ($description === '') {
+            $description = '<p><em>Geen beschrijving.</em></p>';
+        }
 
-    if (!empty($currentTheme['transformDescriptionHeading'])) {
-        $pageName = getPageNameFromHref($href, $display);
-        $description = withCorporateHeadingPrefix($description, $pageName);
+        if (!empty($currentTheme['transformDescriptionHeading'])) {
+            $pageName = getPageNameFromHref($href, $display);
+            $description = withCorporateHeadingPrefix($description, $pageName);
+        }
     }
 
     $folders[] = [
@@ -1038,9 +1046,11 @@ if (count($allowedFoldersByCategory) > 1) {
                                 </div>
                             <?php endif; ?>
 
-                            <div class="content <?= !empty($currentTheme['expandDescriptionByDefault']) ? 'is-expanded' : '' ?>">
-                                <div class="desc"><?= $f['description'] ?></div>
-                            </div>
+                            <?php if (empty($currentTheme['showThumbnail'])): ?>
+                                <div class="content <?= !empty($currentTheme['expandDescriptionByDefault']) ? 'is-expanded' : '' ?>">
+                                    <div class="desc"><?= $f['description'] ?></div>
+                                </div>
+                            <?php endif; ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
